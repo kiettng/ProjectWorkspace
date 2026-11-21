@@ -9,6 +9,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
+    "verify": "pnpm typecheck && pnpm test && pnpm build",
     "templates:prepare": "node scripts/prepare-templates.mjs"
   },
   "dependencies": {

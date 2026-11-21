@@ -80,6 +80,18 @@ Không chạy lại bước chuẩn hóa trên môi trường đang dùng mà kh
 
 ## Triển khai
 
-Vercel: framework Next.js, Node.js 24, install `pnpm install --frozen-lockfile`, build `pnpm build`. Khai báo ba biến từ `.env.example` (OWNER_USER_ID là tùy chọn để khóa thêm theo UUID). Mẫu Word được đóng gói cùng API phía máy chủ; không nằm trong thư mục public.
+Vercel: framework Next.js, Node.js 24, root directory `project-dossier`, install `pnpm install --frozen-lockfile`, build `pnpm verify`. Khai báo ba biến từ `.env.example` (OWNER_USER_ID là tùy chọn để khóa thêm theo UUID).
+
+Mẫu Word vận hành được lưu trong bucket private `dossier` của Supabase, dưới thư mục `templates/`. API tải mẫu bằng phiên đăng nhập của chủ sở hữu và kiểm tra checksum trước khi sinh. Mã nguồn và bản build không cần chứa các file Word riêng, không cần service-role key hay khóa đọc tài liệu cho CI. Cơ chế `bundled/` được giữ để tương thích các bản triển khai cũ.
+
+Khi chuyển từ bản đóng gói cũ, upload đủ 17 file tương ứng vào `dossier/templates/`, xác minh SHA-256 với metadata, rồi áp dụng `supabase/template-storage.sql`. Không công khai bucket và không thay checksum của phiên bản cũ.
+
+## CI/CD
+
+Workflow [CI](../.github/workflows/ci.yml) chạy trên push vào `main`, pull request vào `main` và thao tác chạy thủ công. Mỗi lần chạy cài dependency bằng lockfile, kiểm tra TypeScript, chạy test rồi build Next.js. Actions được ghim theo commit SHA; job chỉ có quyền đọc source và không nhận secret ứng dụng hay file Word.
+
+Vercel Git integration theo dõi repository `kiettng/ProjectWorkspace`. Nhánh production là `main`, thư mục ứng dụng là `project-dossier`. Build command `pnpm verify` chạy lại cùng các kiểm tra trước khi Vercel cho bản mới lên production; nếu typecheck, test hoặc build lỗi thì bản production trước vẫn được giữ.
+
+Các bài test dùng Word riêng được bỏ qua trong môi trường CI không có tài liệu đó. Bộ mẫu thực tế được kiểm tra riêng trong môi trường có quyền truy cập, không đưa nội dung vào log hay artifacts công khai. Schema database không tự migration theo mỗi lần deploy.
 
 Trước khi dùng hồ sơ thật: kiểm tra đăng nhập và đồng bộ giữa hai thiết bị, rà soát một DOCX được sinh từ mỗi loại mẫu, và thiết lập quy trình sao lưu database cùng Storage.
