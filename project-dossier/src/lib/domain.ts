@@ -34,9 +34,16 @@ export function missingVariables(keys: string[], values: Record<string,string>) 
   return keys.filter(key=>!String(values[key]??'').trim());
 }
 export function documentProgress(tasks: Task[], docs: Document[], templates: Template[]) {
-  const codes=[...new Set(tasks.flatMap(t=>t.required_template_codes))];
-  const valid=codes.filter(code=>docs.some(d=>!d.deleted_at && ['Approved','Issued','Signed'].includes(d.status) && templates.find(t=>t.id===d.template_id)?.code===code)).length;
+  const codes=[...new Set(tasks.filter(t=>!t.deleted_at&&t.status!=='Cancelled').flatMap(t=>t.required_template_codes))];
+  const valid=codes.filter(code=>docs.some(d=>!d.deleted_at && ['Approved','Issued','Signed'].includes(d.status) && documentCode(d,templates)===code)).length;
   return {total:codes.length, valid, percent: codes.length?Math.round(valid/codes.length*100):100};
+}
+export function documentCode(doc:Document,templates:Template[]) {
+  return doc.requirement_code||templates.find(t=>t.id===doc.template_id)?.code||'';
+}
+export function uploadMime(filename:string) {
+  const types:Record<string,string>={docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',dotx:'application/vnd.openxmlformats-officedocument.wordprocessingml.template',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',txt:'text/plain',csv:'text/csv'};
+  return types[filename.split('.').pop()?.toLowerCase()||'']||'application/octet-stream';
 }
 export function safeName(value:string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(0,150) || 'document';

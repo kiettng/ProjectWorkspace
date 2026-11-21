@@ -6,7 +6,7 @@ Bản online: https://project-dossier-kiettuannguyenttnn-3204.vercel.app. Chọn
 
 ## Công nghệ
 
-Next.js 16, React, TypeScript, Supabase Auth/PostgreSQL/Storage, Docxtemplater và Mammoth. API chạy bằng Node.js; không cần một backend NestJS riêng cho bản cá nhân.
+Next.js 16, React, TypeScript, Supabase Auth/PostgreSQL/Storage, Docxtemplater, docx-preview và Mammoth. API chạy bằng Node.js; không cần một backend NestJS riêng cho bản cá nhân.
 
 ## Chạy trên máy
 
@@ -35,8 +35,8 @@ pnpm start
 - Kho 14 mẫu Word Việt/Anh, thêm mẫu và phiên bản mới, từ điển biến.
 - Sinh DOCX bằng mẫu thật, xử lý biến bị chia giữa nhiều XML runs, chặn thiếu dữ liệu, lưu snapshot.
 - Upload trực tiếp vào kho Storage riêng tư, kiểm tra định dạng/nội dung/kích thước, checksum, lịch sử phiên bản.
-- Xem trực tiếp PDF/ảnh, xem nội dung văn bản DOCX/DOTX/TXT/CSV, tải các định dạng còn lại.
-- Công việc theo giai đoạn, chặn hoàn thành nếu thiếu hồ sơ hợp lệ.
+- Xem Word theo bố cục trang (bảng, hình, đầu/chân trang), thu phóng và mở rộng; xem trực tiếp PDF/ảnh, đọc TXT/CSV. PDF chỉ tải vào Hồ sơ & Tài liệu, không dùng làm biểu mẫu.
+- Thêm/sửa/xóa công việc, chọn nhiều mã hồ sơ bắt buộc; PDF đã duyệt/ký có thể gắn mã hồ sơ để tính tiến độ. Chặn hoàn thành nếu thiếu hồ sơ hợp lệ. Cây thư mục có thêm/sửa/xóa, thu gọn và đường nối cha–con; chỉ xóa thư mục trống.
 - Báo cáo CSV, kiểm tra hồ sơ bàn giao và xuất ZIP có manifest/checksum.
 - Nhật ký thao tác và xuất metadata JSON.
 
@@ -46,9 +46,9 @@ Các file Word trong `templates/` là tài sản riêng và **không được co
 
 Với môi trường đang có dữ liệu, khôi phục đúng các file Word từ bản sao riêng vào `templates/` để khớp checksum và storage key đã lưu trong database. Với một dự án mới, đặt bộ mẫu được phép sử dụng trong `../Template Warehouse`, chạy `pnpm templates:prepare`, rồi dùng catalog/SQL được tạo mới để khởi tạo kho mẫu. Không đưa thư mục nguồn hoặc file Word kết quả vào Git.
 
-Các kiểm thử cần file Word riêng sẽ được đánh dấu skipped trên bản clone chưa có các file này. Các kiểm thử độc lập vẫn chạy; khôi phục đủ bộ mẫu để chạy toàn bộ 21 bài kiểm thử.
+Các kiểm thử cần file Word riêng sẽ được đánh dấu skipped trên bản clone chưa có các file này. Các kiểm thử độc lập vẫn chạy; khôi phục đủ bộ mẫu để chạy toàn bộ 23 bài kiểm thử.
 
-Những trường còn trống và nội dung nghiệp vụ mẫu vẫn cần được rà soát trong Word. Xem trước DOCX là bản xem nội dung, không phải bản render bố cục Word. Chuyển Office thành PDF và chỉnh sửa Office trực tuyến chưa được triển khai.
+Những trường còn trống và nội dung nghiệp vụ mẫu vẫn cần được rà soát trong Word. Xem trước DOCX dựng bố cục ngay trên trình duyệt trong iframe không cho chạy script; không gửi tài liệu sang dịch vụ xem Office bên ngoài. Font và ngắt trang có thể khác Microsoft Word. Bản xem thử khi sinh hồ sơ lưu tạm trong Storage private, xóa khi đóng hộp thoại; bản sót lại trên 24 giờ được dọn ở lần xem thử tiếp theo. Chuyển Office thành PDF và chỉnh sửa Office trực tuyến chưa được triển khai.
 
 Không chạy lại bước chuẩn hóa trên môi trường đang dùng mà không tạo phiên bản template mới và cập nhật metadata tương ứng. Tệp đã lưu không tự thay đổi theo dữ liệu dự án hay mẫu mới.
 
@@ -64,6 +64,8 @@ Không chạy lại bước chuẩn hóa trên môi trường đang dùng mà kh
 ## Database
 
 `supabase/schema.sql` là schema khởi tạo cho database mới. Thay địa chỉ minh họa `owner@example.com` bằng email của bạn trước khi áp dụng. `supabase/template-catalog.sql` tạo danh mục 14 mẫu. Các migration đã áp dụng trên project hiện tại được quản lý trong lịch sử Supabase; không chạy lại schema khởi tạo trên database đã có dữ liệu.
+
+Áp dụng các file trong `supabase/migrations/` theo thứ tự sau schema/catalog khi khởi tạo database mới. Migration `202611210001_workspace_editing.sql` bổ sung xóa mềm công việc/thư mục, mã hồ sơ cho file tải lên và quyền xóa riêng bản xem thử; không cấp quyền xóa phiên bản tài liệu. Project đang dùng đã áp dụng migration này.
 
 `supabase/english-template-v2.sql` là migration lịch sử bổ sung phiên bản 2 cho ba mẫu tiếng Anh. Chỉ áp dụng khi giữ nguyên danh mục và bộ mẫu tương ứng từ bản sao riêng. Bước `templates:prepare` cho dự án mới đã có cách gắn biến được sửa và không cần áp dụng lại migration lịch sử này.
 

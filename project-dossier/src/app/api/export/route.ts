@@ -10,7 +10,7 @@ export const maxDuration=60;
 export async function GET(request:Request){
  try{
   const {db,user}=await requireOwner();const id=uuid.parse(new URL(request.url).searchParams.get('project'));
-  const [p,t,d,tp]=await Promise.all([db.from('projects').select('*').eq('id',id).single(),db.from('tasks').select('*').eq('project_id',id),db.from('documents').select('*').eq('project_id',id).is('deleted_at',null),db.from('templates').select('*')]);
+  const [p,t,d,tp]=await Promise.all([db.from('projects').select('*').eq('id',id).single(),db.from('tasks').select('*').eq('project_id',id).is('deleted_at',null),db.from('documents').select('*').eq('project_id',id).is('deleted_at',null),db.from('templates').select('*')]);
   const project=check(p),tasks=check(t) as Task[],documents=check(d) as Document[],templates=check(tp) as Template[];
   const progress=documentProgress(tasks,documents,templates);
   if(progress.valid<progress.total)throw new ApiError(`Còn thiếu ${progress.total-progress.valid} hồ sơ hợp lệ. Hoàn thiện checklist trước khi đóng gói.`,409);

@@ -3,7 +3,7 @@ begin;
 do $$
 declare
  owner_id uuid; pid uuid; pack_id uuid; folder_id uuid; task_id uuid; did uuid; did2 uuid;
- tv_id uuid; req uuid:=gen_random_uuid(); blocked boolean;
+ tv_id uuid; req uuid:=gen_random_uuid(); blocked boolean; extra_folder uuid; child_folder uuid; extra_task uuid; pdf_id uuid;
 begin
  select user_id into owner_id from private.owner_settings;
  if owner_id is null then
@@ -42,6 +42,39 @@ begin
  begin update public.folders set parent_id=(select id from public.folders where project_id=pid and code='04-01') where project_id=pid and code='04';
  exception when raise_exception then blocked:=true; end;
  assert blocked, 'Folder cycles must be rejected';
+ insert into public.folders(project_id,parent_id,code,name) values(pid,null,'qa-parent','QA parent') returning id into extra_folder;
+ insert into public.folders(project_id,parent_id,code,name) values(pid,extra_folder,'qa-child','QA child') returning id into child_folder;
+ update public.folders set name='QA renamed' where id=child_folder;
+ blocked:=false;
+ begin update public.folders set deleted_at=now() where id=extra_folder;
+ exception when raise_exception then blocked:=true; end;
+ assert blocked, 'Cannot delete a folder with active children';
+ insert into public.tasks(project_id,phase_code,title,required_template_codes) values(pid,'QA','Custom task','["BM.40.08"]') returning id into extra_task;
+ update public.tasks set title='Edited task',owner_name='Tester',required_template_codes='["BM.40.08","BM.40.01"]' where id=extra_task;
+ assert (select jsonb_array_length(required_template_codes)=2 from public.tasks where id=extra_task), 'Task supports several requirements';
+ blocked:=false;
+ begin update public.tasks set required_template_codes='["NOT-A-TEMPLATE"]' where id=extra_task;
+ exception when raise_exception then blocked:=true; end;
+ assert blocked, 'Unknown requirements rejected';
+ pdf_id:=public.commit_document(jsonb_build_object('project_id',pid,'folder_id',child_folder,'name','QA.pdf','file_type','pdf','storage_key','qa/'||gen_random_uuid(),'checksum','qa','size_bytes',1,'request_key',gen_random_uuid()));
+ update public.documents set requirement_code='BM.40.01',status='Signed' where id=pdf_id;
+ update public.tasks set status='Done' where id=extra_task;
+ assert (select completed_at is not null from public.tasks where id=extra_task), 'A signed uploaded PDF satisfies a requirement';
+ blocked:=false;
+ begin update public.folders set deleted_at=now() where id=child_folder;
+ exception when raise_exception then blocked:=true; end;
+ assert blocked, 'Cannot delete a folder containing documents';
+
+ update public.tasks set deleted_at=now() where id=extra_task;
+ insert into public.tasks(project_id,phase_code,title) values(pid,'QA','Reused deleted task code');
+ update public.documents set folder_id=(select id from public.folders where project_id=pid and code='00') where id=pdf_id;
+ update public.folders set deleted_at=now() where id=child_folder;
+ blocked:=false;
+ begin update public.documents set folder_id=child_folder where id=pdf_id;
+ exception when raise_exception then blocked:=true; end;
+ assert blocked, 'Deleted folders cannot receive documents';
+ update public.folders set deleted_at=now() where id=extra_folder;
+ assert (select deleted_at is not null from public.folders where id=extra_folder), 'Empty folder can be soft-deleted';
  perform set_config('request.jwt.claims',jsonb_build_object('sub',gen_random_uuid(),'role','authenticated')::text,true);
  assert not private.is_owner(), 'Another authenticated user must be denied';
  assert (select count(*)=0 from public.projects), 'RLS must hide all projects from another user';

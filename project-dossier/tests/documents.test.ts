@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import PizZip from 'pizzip';
 import { inspectWord,renderWord,wordText,validateFile,checksum } from '../src/lib/word';
-import { csvCell,documentProgress,missingVariables,resolveVariables } from '../src/lib/domain';
+import { csvCell,documentProgress,missingVariables,resolveVariables,uploadMime } from '../src/lib/domain';
 import type { Contract,Project,Task,Document,Template } from '../src/lib/types';
 
 const values={CustomerName:'Công ty Kiểm Thử & Cộng sự',ContractNo:'BRAVO/TEST/2026/001',ContractSignedDate:'21/11/2026',
@@ -64,6 +64,18 @@ test('Document progress counts approved requirements and zero denominator',()=>{
  const docs=[{template_id:'a',status:'Signed',deleted_at:null},{template_id:'b',status:'Draft',deleted_at:null}] as Document[];
  assert.deepEqual(documentProgress(tasks,docs,templates),{total:2,valid:1,percent:50});
  assert.deepEqual(documentProgress([],[],[]),{total:0,valid:0,percent:100});
+});
+test('Signed uploaded PDF satisfies its assigned requirement; drafts and deleted tasks do not',()=>{
+ const tasks=[{required_template_codes:['A']},{required_template_codes:['B'],deleted_at:'2026-11-21'},{required_template_codes:['C'],status:'Cancelled'}] as Task[];
+ const pdf={file_type:'pdf',template_id:null,requirement_code:'A',status:'Signed',deleted_at:null} as Document;
+ assert.deepEqual(documentProgress(tasks,[pdf],[]),{total:1,valid:1,percent:100});
+ assert.equal(documentProgress(tasks,[{...pdf,status:'Draft'}],[]).valid,0);
+ assert.equal(documentProgress(tasks,[{...pdf,deleted_at:'2026-11-21'}],[]).valid,0);
+});
+test('Uploads use extension MIME when browser file.type is missing or incorrect',()=>{
+ assert.equal(uploadMime('Signed.PDF'),'application/pdf');
+ assert.equal(uploadMime('template.dotx'),'application/vnd.openxmlformats-officedocument.wordprocessingml.template');
+ assert.equal(uploadMime('report.csv'),'text/csv');
 });
 test('Upload validation rejects mismatched bytes and unknown types',()=>{
  assert.throws(()=>validateFile(Buffer.from('<script>test</script>'),'a.pdf'),/không khớp/);

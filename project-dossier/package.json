@@ -15,6 +15,7 @@
   "dependencies": {
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.119.2",
+    "docx-preview": "0.4.1",
     "docxtemplater": "3.71.1",
     "lucide-react": "1.76.0",
     "mammoth": "1.13.0",

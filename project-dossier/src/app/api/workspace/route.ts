@@ -7,7 +7,7 @@ export async function GET() {
     const tables=['projects','contracts','members','folders','templates','template_versions','documents','document_versions','tasks','template_packs','audit_logs'] as const;
     const results=await Promise.all(tables.map(table=>{
       let q=db.from(table).select('*');
-      if(table==='documents') q=q.is('deleted_at',null);
+      if(['documents','folders','tasks'].includes(table)) q=q.is('deleted_at',null);
       if(table==='audit_logs') q=q.order('created_at',{ascending:false}).limit(100);
       if(table==='projects') q=q.order('created_at',{ascending:false});
       return q;

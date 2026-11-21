@@ -28,7 +28,7 @@ export default function LoginForm() {
   }catch(e){setError(e instanceof Error?e.message:'Không thể kết nối. Vui lòng thử lại.');}
   finally{setBusy(false);}
  }
- return <main className="login-page"><section className="login-story"><a className="brand" href="/login"><span className="brand-symbol"><FolderClosed size={25}/></span><span>Project Dossier<small>KHÔNG GIAN TRIỂN KHAI CÁ NHÂN</small></span></a>
+ return <main className="login-page"><section className="login-story"><a className="brand" href="/login"><img src="/icon.svg" className="brand-symbol" width={43} height={43} alt=""/><span>Project Dossier<small>KHÔNG GIAN TRIỂN KHAI CÁ NHÂN</small></span></a>
   <div><span className="eyebrow light">MỌI HỒ SƠ, MỘT NƠI</span><h1>Gọn hồ sơ.<br/>Rõ tiến độ.</h1><p>Từ kế hoạch đầu tiên đến biên bản bàn giao. Giữ dự án, dữ liệu và tài liệu của bạn luôn liền mạch.</p>
   <div className="login-features"><span><CheckCircle2 size={18}/> Điền dữ liệu một lần, dùng cho nhiều biểu mẫu</span><span><CheckCircle2 size={18}/> Lưu từng phiên bản, dễ dàng tra cứu</span><span><CheckCircle2 size={18}/> Tiếp tục công việc từ bất kỳ máy tính nào</span></div></div>
   <small>Project Dossier · Không gian riêng của bạn</small></section>

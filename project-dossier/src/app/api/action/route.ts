@@ -32,17 +32,25 @@ export async function POST(request:Request) {
    }
    case 'create-folder': {
     const p=z.object({project_id:uuid,parent_id:uuid.nullable(),name}).parse(body.data);
-    const existing=check(await db.from('folders').select('name').eq('project_id',p.project_id));
-    if(existing.some(f=>f.name.toLowerCase()===p.name.toLowerCase())) throw new ApiError('Tên thư mục đã tồn tại.');
     result=check(await db.from('folders').insert({...p,code:'custom-'+crypto.randomUUID(),sort_order:100}).select().single());break;
    }
    case 'update-folder': {
     const p=z.object({id:uuid,name,parent_id:uuid.nullable()}).parse(body.data); const {id,...data}=p;
     result=check(await db.from('folders').update(data).eq('id',id).select().single());break;
    }
+   case 'delete-folder': result=check(await db.from('folders').update({deleted_at:new Date().toISOString()}).eq('id',uuid.parse(body.id)).is('deleted_at',null).select().single());break;
+   case 'create-task':
    case 'update-task': {
-    const p=z.object({id:uuid,status:z.enum(['Todo','InProgress','InReview','Done','Blocked','Cancelled']),owner_name:z.string().max(200),due_date:date}).parse(body.data);
-    const {id,...data}=p; result=check(await db.from('tasks').update({...data,due_date:data.due_date||null}).eq('id',id).select().single());break;
+    const p=z.object({id:uuid.optional(),project_id:uuid,phase_code:name,title:name,status:z.enum(['Todo','InProgress','InReview','Done','Blocked','Cancelled']),owner_name:z.string().max(200),due_date:date,
+     required_template_codes:z.array(z.string().min(1).max(80)).max(100).transform(a=>[...new Set(a)])}).parse(body.data);
+    const {id,...data}=p; const fields={...data,due_date:data.due_date||null};
+    result=body.action==='create-task'?check(await db.from('tasks').insert({...fields,sort_order:100}).select().single()):
+     check(await db.from('tasks').update(fields).eq('id',uuid.parse(id)).eq('project_id',p.project_id).is('deleted_at',null).select().single());break;
+   }
+   case 'delete-task': result=check(await db.from('tasks').update({deleted_at:new Date().toISOString()}).eq('id',uuid.parse(body.id)).is('deleted_at',null).select().single());break;
+   case 'document-requirement': {
+    const p=z.object({id:uuid,requirement_code:z.string().min(1).max(80).nullable()}).parse(body.data);
+    result=check(await db.from('documents').update({requirement_code:p.requirement_code}).eq('id',p.id).select().single());break;
    }
    case 'document-status': {
     const p=z.object({id:uuid,status:z.enum(['Draft','InReview','Approved','Issued','Signed','Archived'])}).parse(body.data);
