@@ -13,7 +13,9 @@ export async function GET(request:Request) {
   const version=check(await db.from(kind==='template'?'template_versions':'document_versions').select('*').eq('id',id).single());
   const originalName=kind==='template'?version.original_name:
    check(await db.from('documents').select('name').eq('id',version.document_id).single()).name;
-  const filename=kind==='template'?originalName:originalName.replace(/(\.[^.]+)$/,`_v${String(version.version).padStart(2,'0')}$1`);
+  const filename=kind==='template'?
+   (/\.docx$/i.test(version.storage_key)?originalName.replace(/\.dotx$/i,'.docx'):originalName):
+   originalName.replace(/(\.[^.]+)$/,`_v${String(version.version).padStart(2,'0')}$1`);
   if(['link','download'].includes(mode)&&!version.storage_key.startsWith('bundled/')) {
    const signed=check(await db.storage.from('dossier').createSignedUrl(version.storage_key,120,mode==='download'?{download:filename}:undefined));
    if(mode==='download') return NextResponse.redirect(signed.signedUrl);
