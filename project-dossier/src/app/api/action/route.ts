@@ -1,0 +1,60 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { apiError,requireOwner,check,uuid,date,name,ApiError } from '@/lib/api';
+
+export async function POST(request:Request) {
+ try {
+  const {db}=await requireOwner(request);
+  const body=await request.json();
+  let result:unknown;
+  switch(body.action) {
+   case 'create-project': {
+    const p=z.object({code:name,name,customer:name,manager:z.string().max(200),tax_code:z.string().max(50).default(''),start_date:date,end_date:date,
+     pack_id:uuid,project_type:name,contract_number:z.string().max(200).default(''),signed_date:date,
+     description:z.string().max(5000).default(''),modules:z.array(z.string().max(100)).max(50).default([]),integrations:z.array(z.string().max(200)).max(50).default([])}).parse(body.data);
+    if(p.start_date&&p.end_date&&p.end_date<p.start_date) throw new ApiError('Ngày kết thúc phải từ ngày bắt đầu trở đi.');
+    result=check(await db.rpc('create_project',{payload:p})); break;
+   }
+   case 'update-project': {
+    const p=z.object({id:uuid,name,customer:name,manager:z.string().max(200),tax_code:z.string().max(50),description:z.string().max(5000),
+     start_date:date,end_date:date,status:z.enum(['Draft','Active','OnHold','Completed','Archived']),modules:z.array(z.string().max(100)),integrations:z.array(z.string().max(200))}).parse(body.data);
+    const {id,...data}=p;
+    result=check(await db.from('projects').update({...data,start_date:data.start_date||null,end_date:data.end_date||null,updated_at:new Date().toISOString()}).eq('id',id).select().single());break;
+   }
+   case 'add-contract': {
+    const p=z.object({project_id:uuid,number:name,name:z.string().max(300).default(''),signed_date:date,value:z.number().nonnegative().nullable().optional()}).parse(body.data);
+    result=check(await db.from('contracts').insert({...p,signed_date:p.signed_date||null}).select().single());break;
+   }
+   case 'primary-contract': result=check(await db.rpc('set_primary_contract',{contract_id:uuid.parse(body.id)}));break;
+   case 'add-member': {
+    const p=z.object({project_id:uuid,name,role:name,email:z.union([z.email(),z.literal('')]),phone:z.string().max(30)}).parse(body.data);
+    result=check(await db.from('members').insert(p).select().single()); break;
+   }
+   case 'create-folder': {
+    const p=z.object({project_id:uuid,parent_id:uuid.nullable(),name}).parse(body.data);
+    const existing=check(await db.from('folders').select('name').eq('project_id',p.project_id));
+    if(existing.some(f=>f.name.toLowerCase()===p.name.toLowerCase())) throw new ApiError('Tên thư mục đã tồn tại.');
+    result=check(await db.from('folders').insert({...p,code:'custom-'+crypto.randomUUID(),sort_order:100}).select().single());break;
+   }
+   case 'update-folder': {
+    const p=z.object({id:uuid,name,parent_id:uuid.nullable()}).parse(body.data); const {id,...data}=p;
+    result=check(await db.from('folders').update(data).eq('id',id).select().single());break;
+   }
+   case 'update-task': {
+    const p=z.object({id:uuid,status:z.enum(['Todo','InProgress','InReview','Done','Blocked','Cancelled']),owner_name:z.string().max(200),due_date:date}).parse(body.data);
+    const {id,...data}=p; result=check(await db.from('tasks').update({...data,due_date:data.due_date||null}).eq('id',id).select().single());break;
+   }
+   case 'document-status': {
+    const p=z.object({id:uuid,status:z.enum(['Draft','InReview','Approved','Issued','Signed','Archived'])}).parse(body.data);
+    result=check(await db.from('documents').update({status:p.status}).eq('id',p.id).select().single());break;
+   }
+   case 'move-document': {
+    const p=z.object({id:uuid,folder_id:uuid}).parse(body.data);
+    result=check(await db.from('documents').update({folder_id:p.folder_id}).eq('id',p.id).select().single());break;
+   }
+   case 'delete-document': result=check(await db.from('documents').update({deleted_at:new Date().toISOString()}).eq('id',uuid.parse(body.id)).select().single());break;
+   default: throw new ApiError('Thao tác không được hỗ trợ.');
+  }
+  return NextResponse.json({data:result});
+ } catch(error) {return apiError(error);}
+}
