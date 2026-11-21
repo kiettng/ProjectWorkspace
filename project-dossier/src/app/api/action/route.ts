@@ -32,28 +32,40 @@ export async function POST(request:Request) {
    }
    case 'create-folder': {
     const p=z.object({project_id:uuid,parent_id:uuid.nullable(),name}).parse(body.data);
-    result=check(await db.from('folders').insert({...p,code:'custom-'+crypto.randomUUID(),sort_order:100}).select().single());break;
+    let siblings=db.from('folders').select('sort_order').eq('project_id',p.project_id).is('deleted_at',null);
+    siblings=p.parent_id?siblings.eq('parent_id',p.parent_id):siblings.is('parent_id',null);
+    const last=check(await siblings.order('sort_order',{ascending:false}).limit(1));
+    result=check(await db.from('folders').insert({...p,code:'custom-'+crypto.randomUUID(),sort_order:(last[0]?.sort_order??0)+10}).select().single());break;
    }
    case 'update-folder': {
     const p=z.object({id:uuid,name,parent_id:uuid.nullable()}).parse(body.data); const {id,...data}=p;
     result=check(await db.from('folders').update(data).eq('id',id).select().single());break;
    }
    case 'delete-folder': result=check(await db.from('folders').update({deleted_at:new Date().toISOString()}).eq('id',uuid.parse(body.id)).is('deleted_at',null).select().single());break;
+   case 'reorder-folders': {
+    const p=z.object({project_id:uuid,parent_id:uuid.nullable(),ids:z.array(uuid).min(1).max(500)}).parse(body.data);
+    result=check(await db.rpc('reorder_folders',{p_project_id:p.project_id,p_parent_id:p.parent_id,p_ids:p.ids}),true);break;
+   }
    case 'create-task':
    case 'update-task': {
     const p=z.object({id:uuid.optional(),project_id:uuid,phase_code:name,title:name,status:z.enum(['Todo','InProgress','InReview','Done','Blocked','Cancelled']),owner_name:z.string().max(200),due_date:date,
      required_template_codes:z.array(z.string().min(1).max(80)).max(100).transform(a=>[...new Set(a)])}).parse(body.data);
     const {id,...data}=p; const fields={...data,due_date:data.due_date||null};
-    result=body.action==='create-task'?check(await db.from('tasks').insert({...fields,sort_order:100}).select().single()):
+    const last=body.action==='create-task'?check(await db.from('tasks').select('sort_order').eq('project_id',p.project_id).is('deleted_at',null).order('sort_order',{ascending:false}).limit(1)):[];
+    result=body.action==='create-task'?check(await db.from('tasks').insert({...fields,sort_order:(last[0]?.sort_order??0)+10}).select().single()):
      check(await db.from('tasks').update(fields).eq('id',uuid.parse(id)).eq('project_id',p.project_id).is('deleted_at',null).select().single());break;
    }
    case 'delete-task': result=check(await db.from('tasks').update({deleted_at:new Date().toISOString()}).eq('id',uuid.parse(body.id)).is('deleted_at',null).select().single());break;
+   case 'reorder-tasks': {
+    const p=z.object({project_id:uuid,ids:z.array(uuid).min(1).max(500)}).parse(body.data);
+    result=check(await db.rpc('reorder_tasks',{p_project_id:p.project_id,p_ids:p.ids}),true);break;
+   }
    case 'document-requirement': {
     const p=z.object({id:uuid,requirement_code:z.string().min(1).max(80).nullable()}).parse(body.data);
     result=check(await db.from('documents').update({requirement_code:p.requirement_code}).eq('id',p.id).select().single());break;
    }
    case 'document-status': {
-    const p=z.object({id:uuid,status:z.enum(['Draft','InReview','Approved','Issued','Signed','Archived'])}).parse(body.data);
+    const p=z.object({id:uuid,status:z.enum(['Draft','Official'])}).parse(body.data);
     result=check(await db.from('documents').update({status:p.status}).eq('id',p.id).select().single());break;
    }
    case 'move-document': {

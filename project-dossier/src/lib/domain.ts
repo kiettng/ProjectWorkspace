@@ -9,9 +9,10 @@ export const variableLabels: Record<string,string> = {
 };
 export const statusLabels: Record<string,string> = {
   Draft: 'Bản nháp', Active: 'Đang triển khai', OnHold: 'Tạm dừng', Completed: 'Hoàn thành', Archived: 'Lưu trữ',
-  InReview: 'Chờ duyệt', Approved: 'Đã duyệt', Issued: 'Đã phát hành', Signed: 'Đã ký',
+  InReview: 'Chờ duyệt', Official: 'Chính thức',
   Todo: 'Chưa bắt đầu', InProgress: 'Đang thực hiện', Done: 'Hoàn thành', Blocked: 'Đang vướng', Cancelled: 'Đã hủy'
 };
+export const documentStatusLabels:Record<string,string>={Draft:'Nháp',Official:'Chính thức'};
 export function dateLabel(value: string | null | undefined) {
   if (!value) return '—';
   return new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
@@ -35,7 +36,7 @@ export function missingVariables(keys: string[], values: Record<string,string>) 
 }
 export function documentProgress(tasks: Task[], docs: Document[], templates: Template[]) {
   const codes=[...new Set(tasks.filter(t=>!t.deleted_at&&t.status!=='Cancelled').flatMap(t=>t.required_template_codes))];
-  const valid=codes.filter(code=>docs.some(d=>!d.deleted_at && ['Approved','Issued','Signed'].includes(d.status) && documentCode(d,templates)===code)).length;
+  const valid=codes.filter(code=>docs.some(d=>!d.deleted_at && d.status==='Official' && documentCode(d,templates)===code)).length;
   return {total:codes.length, valid, percent: codes.length?Math.round(valid/codes.length*100):100};
 }
 export function documentCode(doc:Document,templates:Template[]) {

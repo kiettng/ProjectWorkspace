@@ -1,9 +1,9 @@
 'use client';
 import { useEffect,useRef } from 'react';
 import { X,FolderOpen,LoaderCircle } from 'lucide-react';
-import { statusLabels } from '@/lib/domain';
+import { statusLabels,documentStatusLabels } from '@/lib/domain';
 
-export function Badge({status}:{status:string}){return <span className={'badge status-'+status}>{statusLabels[status]||status}</span>;}
+export function Badge({status,document=false}:{status:string;document?:boolean}){return <span className={'badge status-'+status}>{(document?documentStatusLabels:statusLabels)[status]||status}</span>;}
 export function Progress({value}:{value:number}){return <div className="progress-row"><div className="progress" role="progressbar" aria-label="Tiến độ" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}><span style={{width:value+'%'}}/></div><span>{value}%</span></div>;}
 export function Empty({title,description,action}:{title:string;description:string;action?:React.ReactNode}){return <div className="empty"><span className="empty-icon"><FolderOpen size={30}/></span><h3>{title}</h3><p>{description}</p>{action}</div>;}
 export function Modal({title,subtitle,children,onClose,wide=false}:{title:string;subtitle?:string;children:React.ReactNode;onClose:()=>void;wide?:boolean}) {

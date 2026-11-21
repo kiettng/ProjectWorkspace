@@ -14,7 +14,7 @@ export async function GET(request:Request){
   const project=check(p),tasks=check(t) as Task[],documents=check(d) as Document[],templates=check(tp) as Template[];
   const progress=documentProgress(tasks,documents,templates);
   if(progress.valid<progress.total)throw new ApiError(`Còn thiếu ${progress.total-progress.valid} hồ sơ hợp lệ. Hoàn thiện checklist trước khi đóng gói.`,409);
-  const valid=documents.filter(d=>['Approved','Issued','Signed'].includes(d.status));
+  const valid=documents.filter(d=>d.status==='Official');
   if(!valid.length)throw new ApiError('Chưa có hồ sơ hợp lệ để xuất.');
   const versions=check(await db.from('document_versions').select('*').in('document_id',valid.map(d=>d.id)));
   const current=valid.map(d=>({d,v:versions.find(v=>v.document_id===d.id&&v.version===d.current_version)}));

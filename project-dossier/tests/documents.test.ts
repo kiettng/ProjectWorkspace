@@ -58,16 +58,16 @@ test('Resolver uses the explicitly selected primary contract',()=>{
  assert.equal(resolveVariables(p,[]).ContractNo,'');
  assert.throws(()=>resolveVariables(p,[contracts[1],contracts[1]]),/nhiều hợp đồng/);
 });
-test('Document progress counts approved requirements and zero denominator',()=>{
+test('Document progress counts official requirements and zero denominator',()=>{
  const tasks=[{required_template_codes:['A','B']}] as Task[];
  const templates=[{id:'a',code:'A'},{id:'b',code:'B'}] as Template[];
- const docs=[{template_id:'a',status:'Signed',deleted_at:null},{template_id:'b',status:'Draft',deleted_at:null}] as Document[];
+ const docs=[{template_id:'a',status:'Official',deleted_at:null},{template_id:'b',status:'Draft',deleted_at:null}] as Document[];
  assert.deepEqual(documentProgress(tasks,docs,templates),{total:2,valid:1,percent:50});
  assert.deepEqual(documentProgress([],[],[]),{total:0,valid:0,percent:100});
 });
-test('Signed uploaded PDF satisfies its assigned requirement; drafts and deleted tasks do not',()=>{
+test('Official uploaded PDF satisfies its assigned requirement; drafts and deleted tasks do not',()=>{
  const tasks=[{required_template_codes:['A']},{required_template_codes:['B'],deleted_at:'2026-11-21'},{required_template_codes:['C'],status:'Cancelled'}] as Task[];
- const pdf={file_type:'pdf',template_id:null,requirement_code:'A',status:'Signed',deleted_at:null} as Document;
+ const pdf={file_type:'pdf',template_id:null,requirement_code:'A',status:'Official',deleted_at:null} as Document;
  assert.deepEqual(documentProgress(tasks,[pdf],[]),{total:1,valid:1,percent:100});
  assert.equal(documentProgress(tasks,[{...pdf,status:'Draft'}],[]).valid,0);
  assert.equal(documentProgress(tasks,[{...pdf,deleted_at:'2026-11-21'}],[]).valid,0);

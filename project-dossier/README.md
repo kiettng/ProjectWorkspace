@@ -36,7 +36,8 @@ pnpm start
 - Sinh DOCX bằng mẫu thật, xử lý biến bị chia giữa nhiều XML runs, chặn thiếu dữ liệu, lưu snapshot.
 - Upload trực tiếp vào kho Storage riêng tư, kiểm tra định dạng/nội dung/kích thước, checksum, lịch sử phiên bản.
 - Xem Word theo bố cục trang (bảng, hình, đầu/chân trang), thu phóng và mở rộng; xem trực tiếp PDF/ảnh, đọc TXT/CSV. PDF chỉ tải vào Hồ sơ & Tài liệu, không dùng làm biểu mẫu.
-- Thêm/sửa/xóa công việc, chọn nhiều mã hồ sơ bắt buộc; PDF đã duyệt/ký có thể gắn mã hồ sơ để tính tiến độ. Chặn hoàn thành nếu thiếu hồ sơ hợp lệ. Cây thư mục có thêm/sửa/xóa, thu gọn và đường nối cha–con; chỉ xóa thư mục trống.
+- Thêm/sửa/xóa công việc, chọn nhiều mã hồ sơ bắt buộc; Word/PDF trạng thái **Chính thức** được tính vào tiến độ. Chặn hoàn thành nếu thiếu hồ sơ chính thức. Cây thư mục có thêm/sửa/xóa, thu gọn và đường nối cha–con; chỉ xóa thư mục trống.
+- Hồ sơ/tài liệu có hai trạng thái **Nháp** và **Chính thức**. Hồ sơ chính thức cần thêm phiên bản mới trước khi sửa. Kéo thả hoặc dùng nút lên/xuống để sắp xếp thư mục cùng cấp và công việc; thứ tự lưu trên Supabase và đồng bộ giữa màn hình Công việc với tab dự án.
 - Báo cáo CSV, kiểm tra hồ sơ bàn giao và xuất ZIP có manifest/checksum.
 - Nhật ký thao tác và xuất metadata JSON.
 
@@ -46,7 +47,7 @@ Các file Word trong `templates/` là tài sản riêng và **không được co
 
 Với môi trường đang có dữ liệu, khôi phục đúng các file Word từ bản sao riêng vào `templates/` để khớp checksum và storage key đã lưu trong database. Với một dự án mới, đặt bộ mẫu được phép sử dụng trong `../Template Warehouse`, chạy `pnpm templates:prepare`, rồi dùng catalog/SQL được tạo mới để khởi tạo kho mẫu. Không đưa thư mục nguồn hoặc file Word kết quả vào Git.
 
-Các kiểm thử cần file Word riêng sẽ được đánh dấu skipped trên bản clone chưa có các file này. Các kiểm thử độc lập vẫn chạy; khôi phục đủ bộ mẫu để chạy toàn bộ 27 bài kiểm thử.
+Các kiểm thử cần file Word riêng sẽ được đánh dấu skipped trên bản clone chưa có các file này. Các kiểm thử độc lập vẫn chạy; khôi phục đủ bộ mẫu để chạy toàn bộ bài kiểm thử.
 
 Những trường còn trống và nội dung nghiệp vụ mẫu vẫn cần được rà soát trong Word. Xem trước DOCX dựng bố cục ngay trên trình duyệt trong iframe không cho chạy script; không gửi tài liệu sang dịch vụ xem Office bên ngoài. Font và ngắt trang có thể khác Microsoft Word. Bản xem thử khi sinh hồ sơ lưu tạm trong Storage private, xóa khi đóng hộp thoại; bản sót lại trên 24 giờ được dọn ở lần xem thử tiếp theo. Chuyển Office thành PDF và chỉnh sửa Office trực tuyến chưa được triển khai.
 
@@ -65,7 +66,7 @@ Không chạy lại bước chuẩn hóa trên môi trường đang dùng mà kh
 
 `supabase/schema.sql` là schema khởi tạo cho database mới. Thay địa chỉ minh họa `owner@example.com` bằng email của bạn trước khi áp dụng. `supabase/template-catalog.sql` tạo danh mục 14 mẫu. Các migration đã áp dụng trên project hiện tại được quản lý trong lịch sử Supabase; không chạy lại schema khởi tạo trên database đã có dữ liệu.
 
-Áp dụng các file trong `supabase/migrations/` theo thứ tự sau schema/catalog khi khởi tạo database mới. Migration `202611210001_workspace_editing.sql` bổ sung xóa mềm công việc/thư mục, mã hồ sơ cho file tải lên và quyền xóa riêng bản xem thử; không cấp quyền xóa phiên bản tài liệu. Project đang dùng đã áp dụng migration này.
+Áp dụng các file trong `supabase/migrations/` theo thứ tự sau schema/catalog khi khởi tạo database mới. Migration `202611210001_workspace_editing.sql` bổ sung xóa mềm công việc/thư mục, mã hồ sơ cho file tải lên và quyền xóa riêng bản xem thử. Migration `202611210002_official_status_and_manual_order.sql` chuyển trạng thái hồ sơ cũ sang Nháp/Chính thức và thêm lệnh sắp xếp thứ tự có kiểm tra quyền; `202611210003_qualify_reorder_ids.sql` sửa cách tham chiếu ID trong hai lệnh đó. Không cấp quyền xóa phiên bản tài liệu. Project đang dùng đã áp dụng các migration này.
 
 `supabase/english-template-v2.sql` là migration lịch sử bổ sung phiên bản 2 cho ba mẫu tiếng Anh. Chỉ áp dụng khi giữ nguyên danh mục và bộ mẫu tương ứng từ bản sao riêng. Bước `templates:prepare` cho dự án mới đã có cách gắn biến được sửa và không cần áp dụng lại migration lịch sử này.
 
@@ -74,7 +75,7 @@ Không chạy lại bước chuẩn hóa trên môi trường đang dùng mà kh
 ## Giới hạn của bản hiện tại
 
 - Upload tối đa 20 MB/tệp; bộ hồ sơ ZIP tối đa 19 MB tổng dung lượng đầu vào.
-- Trình xem Word chỉ hiển thị văn bản. Cần mở bản tải xuống để rà soát bố cục cuối cùng.
+- Trình xem Word dựng bố cục trên trình duyệt; font và ngắt trang có thể khác Microsoft Word. Cần mở bản tải xuống để rà soát bố cục cuối cùng.
 - Chưa tích hợp quét virus, chữ ký số, email thông báo nghiệp vụ, Office editor, Gantt hay AI.
 - Supabase hiện cảnh báo tùy chọn kiểm tra mật khẩu bị lộ chưa bật. Tham khảo https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.
 - Xóa bản nháp là soft-delete. Khôi phục hiện thực hiện tại database; chưa có giao diện thùng rác.
