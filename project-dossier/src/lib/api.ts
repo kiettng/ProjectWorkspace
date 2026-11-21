@@ -2,12 +2,12 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { serverClient } from './supabase/server';
 import { z } from 'zod';
+import { sameRequestOrigin } from './request-origin';
 
 export class ApiError extends Error { constructor(message:string,public status=400){super(message);} }
 export async function requireOwner(request?:Request) {
   if(request && !['GET','HEAD'].includes(request.method)) {
-    const origin=request.headers.get('origin');
-    if(!origin || origin!==new URL(request.url).origin) throw new ApiError('Nguồn yêu cầu không hợp lệ.',403);
+    if(!sameRequestOrigin(request)) throw new ApiError('Nguồn yêu cầu không hợp lệ.',403);
   }
   const db=await serverClient();
   const {data:{user},error}=await db.auth.getUser();

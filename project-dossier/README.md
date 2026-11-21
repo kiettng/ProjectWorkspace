@@ -46,7 +46,7 @@ Các file Word trong `templates/` là tài sản riêng và **không được co
 
 Với môi trường đang có dữ liệu, khôi phục đúng các file Word từ bản sao riêng vào `templates/` để khớp checksum và storage key đã lưu trong database. Với một dự án mới, đặt bộ mẫu được phép sử dụng trong `../Template Warehouse`, chạy `pnpm templates:prepare`, rồi dùng catalog/SQL được tạo mới để khởi tạo kho mẫu. Không đưa thư mục nguồn hoặc file Word kết quả vào Git.
 
-Các kiểm thử cần file Word riêng sẽ được đánh dấu skipped trên bản clone chưa có các file này. Các kiểm thử độc lập vẫn chạy; khôi phục đủ bộ mẫu để chạy toàn bộ 23 bài kiểm thử.
+Các kiểm thử cần file Word riêng sẽ được đánh dấu skipped trên bản clone chưa có các file này. Các kiểm thử độc lập vẫn chạy; khôi phục đủ bộ mẫu để chạy toàn bộ 27 bài kiểm thử.
 
 Những trường còn trống và nội dung nghiệp vụ mẫu vẫn cần được rà soát trong Word. Xem trước DOCX dựng bố cục ngay trên trình duyệt trong iframe không cho chạy script; không gửi tài liệu sang dịch vụ xem Office bên ngoài. Font và ngắt trang có thể khác Microsoft Word. Bản xem thử khi sinh hồ sơ lưu tạm trong Storage private, xóa khi đóng hộp thoại; bản sót lại trên 24 giờ được dọn ở lần xem thử tiếp theo. Chuyển Office thành PDF và chỉnh sửa Office trực tuyến chưa được triển khai.
 
