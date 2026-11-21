@@ -10,6 +10,13 @@ import type { Contract,Project,Task,Document,Template } from '../src/lib/types';
 const values={CustomerName:'Công ty Kiểm Thử & Cộng sự',ContractNo:'BRAVO/TEST/2026/001',ContractSignedDate:'21/11/2026',
  DocumentDate:'21/11/2026',DocumentNo:'KTKS/TEST-001/20261121-01',ProjectManager:'Người kiểm thử',ProjectStartDate:'21/11/2026',ProjectEndDate:'21/12/2026',ProjectName:'Dự án kiểm thử',ProjectCode:'TEST-001'};
 const catalog=JSON.parse(await readFile('templates/catalog.json','utf8')) as {file:string;code:string;variables:string[]}[];
+function wordFixture(paragraphXml:string) {
+ const zip=new PizZip();
+ zip.file('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+ zip.file('_rels/.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+ zip.file('word/document.xml','<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+paragraphXml+'</w:body></w:document>');
+ return zip.generate({type:'nodebuffer'});
+}
 for(const t of catalog) test(`Real template ${t.code}: fills fields and preserves structure`,{skip:!existsSync('templates/'+t.file)},async()=>{
  const bytes=await readFile('templates/'+t.file),before=new PizZip(bytes);
  assert.deepEqual(inspectWord(bytes).variables.toSorted(),t.variables.toSorted());
@@ -21,16 +28,17 @@ for(const t of catalog) test(`Real template ${t.code}: fills fields and preserve
  assert.equal(validateFile(output,'result.docx').extension,'docx');
 });
 test('Placeholders split across Word runs resolve correctly',()=>{
- const zip=new PizZip();
- zip.file('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
- zip.file('_rels/.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
- zip.file('word/document.xml','<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>{=Cus</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>tomerName}</w:t></w:r></w:p></w:body></w:document>');
- const out=renderWord(zip.generate({type:'nodebuffer'}),values);
+ const bytes=wordFixture('<w:p><w:r><w:t>{=Cus</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>tomerName}</w:t></w:r></w:p>');
+ const out=renderWord(bytes,values);
  assert.ok(new PizZip(out).file('word/document.xml')!.asText().includes('Công ty Kiểm Thử &amp; Cộng sự'));
 });
-test('Required variables stop generation',{skip:!existsSync('templates/BM.40.08.docx')},async()=>{
- const bytes=await readFile('templates/BM.40.08.docx');
+test('Required variables stop generation',async()=>{
+ const bytes=wordFixture('<w:p><w:r><w:t>{=ContractSignedDate}</w:t></w:r></w:p>');
  assert.throws(()=>renderWord(bytes,{...values,ContractSignedDate:''}),/Thiếu dữ liệu/);
+ if(existsSync('templates/BM.40.08.docx')) {
+  const survey=await readFile('templates/BM.40.08.docx');
+  assert.throws(()=>renderWord(survey,{...values,ContractSignedDate:''}),/Thiếu dữ liệu/);
+ }
  assert.deepEqual(missingVariables(['A','B'],{A:'  ',B:'ok'}),['A']);
 });
 const englishPlan=catalog.find(t=>t.code==='BM.40.01.EN');
