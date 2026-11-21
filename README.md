@@ -4,6 +4,8 @@
 
 Mã nguồn Project Dossier — ứng dụng web cá nhân quản lý dự án, biểu mẫu Word và hồ sơ triển khai.
 
+Website: https://k-projectdocs.vercel.app.
+
 Ứng dụng nằm trong [`project-dossier/`](project-dossier/). Xem [hướng dẫn chạy, cấu hình Supabase và triển khai](project-dossier/README.md).
 
 ## Công nghệ

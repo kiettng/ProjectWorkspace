@@ -2,7 +2,7 @@
 
 Ứng dụng web cá nhân quản lý dự án và hồ sơ triển khai. Giao diện phát triển từ prototype được cung cấp; dữ liệu thật lưu trên Supabase PostgreSQL và Storage riêng tư.
 
-Bản online: https://project-dossier-kiettuannguyenttnn-3204.vercel.app. Chọn “Lần đầu sử dụng? Kích hoạt tài khoản” để tự tạo mật khẩu cho địa chỉ email chủ sở hữu đã cấu hình. Xác nhận email rồi đăng nhập bằng chính trình duyệt đó; sau đó có thể đăng nhập từ thiết bị khác. Vercel Authentication hiện cũng bảo vệ bản hosting và có thể yêu cầu đăng nhập Vercel.
+Bản online: https://k-projectdocs.vercel.app. Chọn “Lần đầu sử dụng? Kích hoạt tài khoản” để tự tạo mật khẩu cho địa chỉ email chủ sở hữu đã cấu hình. Xác nhận email rồi đăng nhập bằng chính trình duyệt đó; sau đó có thể đăng nhập từ thiết bị khác. Vercel Authentication hiện cũng bảo vệ bản hosting và có thể yêu cầu đăng nhập Vercel.
 
 ## Công nghệ
 
