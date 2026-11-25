@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiError,requireOwner,check,uuid,name,ApiError } from '@/lib/api';
-import { safeName } from '@/lib/domain';
+import { documentFilename,safeName } from '@/lib/domain';
 import { checksum,validateFile,inspectWord } from '@/lib/word';
 export const runtime='nodejs';
 export const maxDuration=60;
@@ -17,13 +17,15 @@ export async function POST(request:Request) {
    const signed=check(await db.storage.from('dossier').createSignedUploadUrl(storage_key,{upsert:false}));
    return NextResponse.json({storage_key,request_key,token:signed.token});
   }
-  const input=z.object({storage_key:z.string(),request_key:uuid,name,project_id:uuid.optional(),folder_id:uuid.optional(),document_id:uuid.optional(),
+  const input=z.object({storage_key:z.string(),request_key:uuid,name,display_base:name.optional(),project_id:uuid.optional(),folder_id:uuid.optional(),document_id:uuid.optional(),
    kind:z.enum(['document','template']),template_id:uuid.optional(),code:z.string().regex(/^[A-Z0-9._-]+$/).max(80).optional(),
    title:name.optional(),category:name.optional(),folder_code:z.string().max(100).optional()}).parse(body);
-  if(!input.storage_key.startsWith(`uploads/${user.id}/${input.request_key}/`)) throw new ApiError('Đường dẫn tệp không hợp lệ.',403);
+  if(input.storage_key!==`uploads/${user.id}/${input.request_key}/${safeName(input.name)}`) throw new ApiError('Đường dẫn tệp không hợp lệ.',403);
   const blob=check(await db.storage.from('dossier').download(input.storage_key));
   const bytes=Buffer.from(await blob.arrayBuffer());
-  const {extension}=validateFile(bytes,input.name);
+  let extension:string;
+  try{({extension}=validateFile(bytes,input.name));}
+  catch(error){throw new ApiError(error instanceof Error?error.message:'Tệp không hợp lệ.');}
   if(input.kind==='template') {
    if(!['docx','dotx'].includes(extension)) throw new ApiError('Mẫu phải là DOCX hoặc DOTX.');
    const {variables}=inspectWord(bytes);
@@ -39,16 +41,20 @@ export async function POST(request:Request) {
    return NextResponse.json({template_id});
   }
   if(!input.project_id||!input.folder_id) throw new ApiError('Hãy chọn dự án và thư mục.');
+  const originalBase=input.name.slice(0,input.name.lastIndexOf('.'));
+  let documentName:string;
+  try{documentName=documentFilename(input.name,input.display_base??originalBase);}
+  catch(error){throw new ApiError(error instanceof Error?error.message:'Tên tài liệu không hợp lệ.');}
   if(input.document_id) {
    const previous=check(await db.from('documents').select('file_type').eq('id',input.document_id).eq('project_id',input.project_id).single());
    if(previous.file_type!==extension) throw new ApiError('Phiên bản mới phải cùng định dạng với hồ sơ hiện có. Với định dạng khác, hãy tải lên thành hồ sơ riêng.');
   }
   if(!input.document_id) {
-   const duplicates=check(await db.from('documents').select('id').eq('project_id',input.project_id).eq('folder_id',input.folder_id).eq('name',input.name).is('deleted_at',null));
+   const duplicates=check(await db.from('documents').select('id').eq('project_id',input.project_id).eq('folder_id',input.folder_id).eq('name',documentName).is('deleted_at',null));
    if(duplicates.length) throw new ApiError('Tên tệp đã tồn tại. Hãy chọn “Thêm phiên bản” trên hồ sơ hiện có hoặc đổi tên tệp.',409);
   }
   const document_id=check(await db.rpc('commit_document',{payload:{project_id:input.project_id,folder_id:input.folder_id,document_id:input.document_id,
-   name:input.name,file_type:extension,storage_key:input.storage_key,request_key:input.request_key,checksum:checksum(bytes),size_bytes:bytes.length}}));
+   name:documentName,file_type:extension,storage_key:input.storage_key,request_key:input.request_key,checksum:checksum(bytes),size_bytes:bytes.length}}));
   return NextResponse.json({document_id});
  }catch(error){return apiError(error);}
 }

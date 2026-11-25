@@ -279,7 +279,8 @@ values('dossier','dossier',false,20971520,array[
  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
  'application/pdf','image/png','image/jpeg','image/webp','text/plain','text/csv',
- 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/zip'
+ 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+ 'application/vnd.openxmlformats-officedocument.presentationml.presentation','application/zip'
 ]);
 create policy owner_read_files on storage.objects for select to authenticated
 using(bucket_id='dossier' and (select private.is_owner()));

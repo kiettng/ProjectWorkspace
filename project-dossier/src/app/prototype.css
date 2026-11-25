@@ -72,3 +72,14 @@ html,body{color:var(--ink);background:var(--bg);font-size:14px}
 .document-status-switch button.active:disabled{opacity:1}
 .document-controls>.button-row{margin-top:15px;padding-top:13px;border-top:1px solid #e2ebf8}
 @media(max-width:600px){.document-controls{padding:14px}.document-meta-field label,.document-field-label{font-size:12px}.document-meta-field select,.document-status-switch button{font-size:13px;min-height:42px}.document-field-help{font-size:11px}.document-status-switch{max-width:none}}
+.upload-file-list{display:grid;gap:12px;max-height:48vh;overflow:auto}
+.upload-file-item{padding:16px;border:1px solid var(--line);border-radius:10px;background:#f8faff}
+.upload-source{display:flex;align-items:center;gap:11px;min-width:0;margin-bottom:14px}
+.upload-source>div{min-width:0}.upload-source strong{display:block;font-size:13px;overflow-wrap:anywhere}.upload-source small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.upload-file-item .field-label{font-size:13px}.upload-file-item .form-hint{margin:0}
+.upload-name-control{display:flex;align-items:stretch;min-width:0;border:1px solid #ccddf3;border-radius:8px;background:#fff;overflow:hidden}
+.upload-name-control:focus-within{outline:3px solid #6293f3;outline-offset:2px}
+.upload-name-control input{flex:1;min-width:0;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important;min-height:43px;padding:9px 12px!important}
+.upload-name-control>span{display:flex;align-items:center;padding:0 13px;border-left:1px solid #dce6f4;background:#f1f5fb;color:#47617f;font-size:13px;font-weight:600}
+.type-pptx{background:#fff0e5;color:#b96424}
+@media(max-width:600px){.upload-file-item{padding:14px}.upload-name-control input{font-size:16px}}

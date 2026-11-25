@@ -44,11 +44,11 @@ export async function bundledTemplate(key:string) {
 export function validateFile(bytes:Buffer,filename:string) {
  const extension=filename.split('.').pop()?.toLowerCase()||'';
  const mime:Record<string,string>={docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',dotx:'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
-  xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',txt:'text/plain',csv:'text/csv'};
- if(!mime[extension]) throw new Error('Hỗ trợ DOCX, DOTX, XLSX, PDF, ảnh, TXT và CSV.');
+  xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',txt:'text/plain',csv:'text/csv'};
+ if(!mime[extension]) throw new Error('Hỗ trợ DOCX, DOTX, XLSX, PPTX, PDF, ảnh, TXT và CSV.');
  if(!bytes.length||bytes.length>20*1024*1024) throw new Error('Tệp phải có nội dung và nhỏ hơn 20 MB.');
  let valid=true;
- if(['docx','dotx','xlsx'].includes(extension)) {
+ if(['docx','dotx','xlsx','pptx'].includes(extension)) {
   const zip=new PizZip(bytes);
   if(Object.keys(zip.files).length>5000) throw new Error('Tệp nén có quá nhiều thành phần.');
   let expanded=0;
@@ -57,7 +57,7 @@ export function validateFile(bytes:Buffer,filename:string) {
    expanded+=size;
   }
   if(expanded>100*1024*1024) throw new Error('Tệp Office vượt giới hạn giải nén 100 MB.');
-  valid=!!zip.file(extension==='xlsx'?'xl/workbook.xml':'word/document.xml');
+  valid=!!zip.file(extension==='xlsx'?'xl/workbook.xml':extension==='pptx'?'ppt/presentation.xml':'word/document.xml');
   if(zip.file(/vbaProject\.bin$/i).length) throw new Error('Không hỗ trợ tài liệu chứa macro.');
  } else if(extension==='pdf') valid=bytes.subarray(0,5).toString()==='%PDF-';
  else if(extension==='png') valid=bytes.subarray(0,8).toString('hex')==='89504e470d0a1a0a';

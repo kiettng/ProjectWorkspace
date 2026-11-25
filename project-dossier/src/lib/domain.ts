@@ -43,8 +43,15 @@ export function documentCode(doc:Document,templates:Template[]) {
   return doc.requirement_code||templates.find(t=>t.id===doc.template_id)?.code||'';
 }
 export function uploadMime(filename:string) {
-  const types:Record<string,string>={docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',dotx:'application/vnd.openxmlformats-officedocument.wordprocessingml.template',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',txt:'text/plain',csv:'text/csv'};
+  const types:Record<string,string>={docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',dotx:'application/vnd.openxmlformats-officedocument.wordprocessingml.template',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',txt:'text/plain',csv:'text/csv'};
   return types[filename.split('.').pop()?.toLowerCase()||'']||'application/octet-stream';
+}
+export function documentFilename(sourceName:string,baseName:string) {
+  const dot=sourceName.lastIndexOf('.'),extension=sourceName.slice(dot+1).toLowerCase();
+  const base=baseName.trim().normalize('NFC');
+  if(dot<1||!extension||!base||/[\\/:*?"<>|\u0000-\u001f]/.test(base)||/[. ]$/.test(base)||`${base}.${extension}`.length>300)
+    throw new Error('Tên tài liệu không hợp lệ. Hãy nhập tên khác, không gồm ký tự đặc biệt hoặc dấu chấm ở cuối.');
+  return `${base}.${extension}`;
 }
 export function safeName(value:string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(0,150) || 'document';

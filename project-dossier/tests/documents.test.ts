@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import PizZip from 'pizzip';
 import { inspectWord,renderWord,wordText,validateFile,checksum } from '../src/lib/word';
-import { csvCell,documentProgress,missingVariables,resolveVariables,uploadMime } from '../src/lib/domain';
+import { csvCell,documentFilename,documentProgress,missingVariables,resolveVariables,uploadMime } from '../src/lib/domain';
 import type { Contract,Project,Task,Document,Template } from '../src/lib/types';
 
 const values={CustomerName:'Công ty Kiểm Thử & Cộng sự',ContractNo:'BRAVO/TEST/2026/001',ContractSignedDate:'21/11/2026',
@@ -76,6 +76,20 @@ test('Uploads use extension MIME when browser file.type is missing or incorrect'
  assert.equal(uploadMime('Signed.PDF'),'application/pdf');
  assert.equal(uploadMime('template.dotx'),'application/vnd.openxmlformats-officedocument.wordprocessingml.template');
  assert.equal(uploadMime('report.csv'),'text/csv');
+ assert.equal(uploadMime('slides.pptx'),'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+});
+test('Document names keep the original file type while allowing a new download name',()=>{
+ assert.equal(documentFilename('Bao cao.xlsx','Báo cáo quý 4'),'Báo cáo quý 4.xlsx');
+ assert.equal(documentFilename('Slides.PPTX','Thuyết trình dự án'),'Thuyết trình dự án.pptx');
+ assert.throws(()=>documentFilename('file.pdf','Tên/khác'),/không hợp lệ/);
+ assert.throws(()=>documentFilename('file.pdf','   '),/không hợp lệ/);
+});
+test('PowerPoint upload requires a real presentation package and rejects macros',()=>{
+ const presentation=new PizZip();presentation.file('ppt/presentation.xml','<p:presentation/>');
+ assert.equal(validateFile(presentation.generate({type:'nodebuffer'}),'slides.pptx').extension,'pptx');
+ assert.throws(()=>validateFile(presentation.generate({type:'nodebuffer'}),'slides.xlsx'),/không khớp/);
+ presentation.file('ppt/vbaProject.bin',Buffer.from('macro'));
+ assert.throws(()=>validateFile(presentation.generate({type:'nodebuffer'}),'slides.pptx'),/macro/);
 });
 test('Upload validation rejects mismatched bytes and unknown types',()=>{
  assert.throws(()=>validateFile(Buffer.from('<script>test</script>'),'a.pdf'),/không khớp/);
