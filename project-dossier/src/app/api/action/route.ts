@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiError,requireOwner,check,uuid,date,name,ApiError } from '@/lib/api';
+import { documentFilename } from '@/lib/domain';
+export const maxDuration=60;
 
 export async function POST(request:Request) {
  try {
-  const {db}=await requireOwner(request);
+  const {db,user}=await requireOwner(request);
   const body=await request.json();
   let result:unknown;
   switch(body.action) {
@@ -68,11 +70,33 @@ export async function POST(request:Request) {
     const p=z.object({id:uuid,status:z.enum(['Draft','Official'])}).parse(body.data);
     result=check(await db.from('documents').update({status:p.status}).eq('id',p.id).select().single());break;
    }
+   case 'rename-document': {
+    const p=z.object({id:uuid,base_name:name}).parse(body.data);
+    const doc=check(await db.from('documents').select('id,project_id,folder_id,file_type').eq('id',p.id).is('deleted_at',null).single());
+    let filename:string;
+    try{filename=documentFilename(`file.${doc.file_type}`,p.base_name);}
+    catch(error){throw new ApiError(error instanceof Error?error.message:'Tên tài liệu không hợp lệ.');}
+    const duplicate=check(await db.from('documents').select('id').eq('project_id',doc.project_id).eq('folder_id',doc.folder_id).eq('name',filename).neq('id',p.id).is('deleted_at',null).limit(1));
+    if(duplicate.length) throw new ApiError('Tên tệp đã tồn tại trong thư mục này. Hãy nhập tên khác.',409);
+    result=check(await db.from('documents').update({name:filename}).eq('id',p.id).is('deleted_at',null).select().single());break;
+   }
    case 'move-document': {
     const p=z.object({id:uuid,folder_id:uuid}).parse(body.data);
     result=check(await db.from('documents').update({folder_id:p.folder_id}).eq('id',p.id).select().single());break;
    }
-   case 'delete-document': result=check(await db.from('documents').update({deleted_at:new Date().toISOString()}).eq('id',uuid.parse(body.id)).select().single());break;
+   case 'delete-document': {
+    const id=uuid.parse(body.id),keys:string[]=[];
+    for(let offset=0;;offset+=1000){
+     const page=check(await db.from('document_versions').select('storage_key').eq('document_id',id).order('version',{ascending:true}).range(offset,offset+999));
+     keys.push(...page.map(v=>v.storage_key));
+     if(page.length<1000)break;
+    }
+    const expected=keys.toSorted();
+    if(keys.some(key=>!key.startsWith(`uploads/${user.id}/`)&&!key.startsWith(`generated/${user.id}/`))) throw new ApiError('Đường dẫn tệp không hợp lệ. Không thể xóa hồ sơ.',409);
+    check(await db.rpc('purge_document',{p_document_id:id,p_expected_keys:expected,p_execute:false}));
+    for(let i=0;i<keys.length;i+=1000) check(await db.storage.from('dossier').remove(keys.slice(i,i+1000)));
+    result=check(await db.rpc('purge_document',{p_document_id:id,p_expected_keys:expected,p_execute:true}));break;
+   }
    default: throw new ApiError('Thao tác không được hỗ trợ.');
   }
   return NextResponse.json({data:result});
